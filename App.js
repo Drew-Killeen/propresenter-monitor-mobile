@@ -26,6 +26,8 @@ let thumbnailDisplayQuality = Math.min(
   Math.ceil(Dimensions.get("window").width / 2.4),
   300
 );
+
+// Sets the thumbnail size that is loaded from the api
 let thumbnailLoadQuality = Math.min(
   Math.ceil(Dimensions.get("window").width / 1.1),
   1000
@@ -33,7 +35,7 @@ let thumbnailLoadQuality = Math.min(
 let ipDefault = "";
 let portDefault = "";
 
-const multiSet = async () => {
+const saveIpAndPort = async () => {
   const firstPair = ["@ProPresenter_Ip", ipDefault];
   const secondPair = ["@ProPresenter_Key", portDefault];
   try {
@@ -43,7 +45,7 @@ const multiSet = async () => {
   }
 };
 
-const getMultiple = async () => {
+const getIpAndPort = async () => {
   let values;
   try {
     values = await AsyncStorage.multiGet([
@@ -62,7 +64,7 @@ const getMultiple = async () => {
   }
 };
 
-getMultiple();
+getIpAndPort();
 
 class PageContainer extends Component {
   constructor(props) {
@@ -85,7 +87,7 @@ class PageContainer extends Component {
     this.setState({ checkingConnection: true, error: false });
     ipDefault = ip;
     portDefault = port;
-    multiSet();
+    saveIpAndPort();
     ProPresenterApi.fetchVersion(ipDefault, portDefault)
       .then((response) => {
         if (response.status == 200) {
@@ -118,7 +120,18 @@ class PageContainer extends Component {
         <SafeAreaView style={[styles.pageContainer, styles.AndroidSafeArea]}>
           {this.state.configured ? (
             <ScrollView>
-              <Text style={styles.pageTitle}>ProPresenter Monitor</Text>
+              <View style={styles.pageHeader}>
+                <Text style={styles.pageTitle}>ProPresenter Monitor</Text>
+                {/* <Image
+                  source={{ uri: "./cog_icon.png" }}
+                  style={[
+                    {
+                      width: 56,
+                      height: 56,
+                    },
+                  ]}
+                /> */}
+              </View>
               <TimerContainer />
               <PresentationContainer />
             </ScrollView>
