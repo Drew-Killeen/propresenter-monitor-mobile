@@ -72,7 +72,7 @@ class PageContainer extends Component {
     this.state = {
       configured: false,
       error: false,
-      checkingConnection: false,
+      currentlyCheckingConnection: false,
     };
   }
 
@@ -84,18 +84,22 @@ class PageContainer extends Component {
   };
 
   checkConnection = (ip, port) => {
-    this.setState({ checkingConnection: true, error: false });
+    this.setState({ currentlyCheckingConnection: true, error: false });
     ipDefault = ip;
     portDefault = port;
     saveIpAndPort();
     ProPresenterApi.fetchVersion(ipDefault, portDefault)
       .then((response) => {
         if (response.status == 200) {
-          this.setState({ configured: true, error: false });
+          this.setState({
+            configured: true,
+            error: false,
+            currentlyCheckingConnection: false,
+          });
         }
       })
       .catch((response) => {
-        this.setState({ error: true, checkingConnection: false });
+        this.setState({ error: true, currentlyCheckingConnection: false });
         // console.log(response.status);
       });
   };
@@ -141,7 +145,9 @@ class PageContainer extends Component {
               <ConfigFields
                 onConfigSuccess={this.checkConnection}
                 error={this.state.error}
-                checkingConnection={this.state.checkingConnection}
+                currentlyCheckingConnection={
+                  this.state.currentlyCheckingConnection
+                }
               />
             </>
           )}
@@ -154,7 +160,6 @@ class PageContainer extends Component {
 const ConfigFields = (props) => {
   const [ip, onChangeIp] = React.useState(ipDefault);
   const [port, onChangePort] = React.useState(portDefault);
-  let connectText = "Connect";
 
   return (
     <View style={styles.configContainer}>
@@ -188,7 +193,7 @@ const ConfigFields = (props) => {
             props.onConfigSuccess(ip, port);
           }}
         >
-          {props.checkingConnection ? (
+          {props.currentlyCheckingConnection ? (
             <Text style={styles.buttonText}>Connecting...</Text>
           ) : (
             <Text style={styles.buttonText}>Connect</Text>
