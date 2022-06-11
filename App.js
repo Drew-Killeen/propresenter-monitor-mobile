@@ -116,19 +116,21 @@ class PageContainer extends Component {
         style={styles.pageGradient}
       >
         <SafeAreaView style={[styles.pageContainer, styles.AndroidSafeArea]}>
-          <Text style={styles.pageTitle}>ProPresenter Monitor</Text>
-
           {this.state.configured ? (
             <ScrollView>
+              <Text style={styles.pageTitle}>ProPresenter Monitor</Text>
               <TimerContainer />
               <SlidesContainer />
             </ScrollView>
           ) : (
-            <ConfigFields
-              onConfigSuccess={this.checkConnection}
-              error={this.state.error}
-              checkingConnection={this.state.checkingConnection}
-            />
+            <>
+              <Text style={styles.pageTitle}>ProPresenter Monitor</Text>
+              <ConfigFields
+                onConfigSuccess={this.checkConnection}
+                error={this.state.error}
+                checkingConnection={this.state.checkingConnection}
+              />
+            </>
           )}
         </SafeAreaView>
       </LinearGradient>
@@ -304,6 +306,7 @@ class SlidesContainer extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
+      presentationIsCleared: false,
       presentationID: "1",
       presentationName: "",
       slideIndex: 0,
@@ -315,11 +318,33 @@ class SlidesContainer extends React.Component {
 
   componentDidMount() {
     this.handlePresentationUpdate();
+    // this.checkIfPresentationIsCleared();
+  }
+
+  checkIfPresentationIsCleared() {
+    ProPresenterApi.fetchCurrentSlideIndex(ipDefault, portDefault)
+      .then((response) => {
+        if (response.data.presentation_index.index == null) {
+          this.setState({
+            presentationIsCleared: true,
+          });
+        } else {
+          this.setState({
+            presentationIsCleared: false,
+          });
+          this.handlePresentationUpdate();
+        }
+      })
+      .catch(() => {
+        this.setState({
+          presentationIsCleared: true,
+        });
+      });
   }
 
   handlePresentationUpdate() {
-    ProPresenterApi.fetchCurrentSlideIndex(ipDefault, portDefault).then(
-      (response) => {
+    ProPresenterApi.fetchCurrentSlideIndex(ipDefault, portDefault)
+      .then((response) => {
         this.setState({
           presentationID: response.data.presentation_index.presentation_id.uuid,
           presentationName:
@@ -331,10 +356,15 @@ class SlidesContainer extends React.Component {
           response.data.presentation_index.presentation_id.uuid,
           0
         );
-      }
-    );
+      })
+      .catch(() => {
+        this.setState({
+          presentationIsCleared: true,
+        });
+      });
   }
 
+  // Count the number of slides recursively
   buildSlideArray(id, index) {
     ProPresenterApi.fetchSlideCount(
       ipDefault,
@@ -347,9 +377,16 @@ class SlidesContainer extends React.Component {
         this.buildSlideArray(id, index + 1);
       })
       .catch(() => {
-        this.setState({
-          slideCount: index,
-        });
+        if (index == 0) {
+          this.setState({
+            presentationIsCleared: true,
+          });
+        } else {
+          this.setState({
+            slideCount: index,
+            presentationIsCleared: false,
+          });
+        }
       });
   }
 
@@ -371,80 +408,100 @@ class SlidesContainer extends React.Component {
   };
 
   render() {
-    let slideImgs = [];
-    if (this.state.slideCount > 0) {
-      for (let i = 0; i < this.state.slideCount; i++) {
-        slideImgs.push(
-          <Slide
-            img={ProPresenterApi.fetchSlideThumbnail(
-              ipDefault,
-              portDefault,
-              this.state.presentationID,
-              i,
-              thumbnailLoadQuality
-            )}
-            slideNumber={i + 1}
-            currentSlide={
-              this.state.slideIndex === i
-                ? styles.currentSlide
-                : styles.notCurrentSlide
-            }
-            key={i}
-          />
-        );
-      }
-    }
-
-    return (
-      <>
-        <View style={styles.module}>
-          <View style={[styles.containerTitle]}>
-            <Text style={[styles.containerTitleText]}>Presentation</Text>
-            <Refresh
-              onRefreshPress={this.handlePresentationUpdate}
-              style={styles.refreshContainer}
+    if (this.state.presentationIsCleared === false) {
+      let slideImgs = [];
+      if (this.state.slideCount > 0) {
+        for (let i = 0; i < this.state.slideCount; i++) {
+          slideImgs.push(
+            <Slide
+              img={ProPresenterApi.fetchSlideThumbnail(
+                ipDefault,
+                portDefault,
+                this.state.presentationID,
+                i,
+                thumbnailLoadQuality
+              )}
+              slideNumber={i + 1}
+              currentSlide={
+                this.state.slideIndex === i
+                  ? styles.currentSlide
+                  : styles.notCurrentSlide
+              }
+              key={i}
             />
-          </View>
-          <View style={[styles.presentationBox]}>
-            <Text style={[styles.whiteText, styles.biggerText]}>
-              {this.state.presentationName}
+          );
+        }
+      }
+      return (
+        <>
+          <View style={styles.module}>
+            <View style={[styles.containerTitle]}>
+              <Text style={[styles.containerTitleText]}>Presentation</Text>
+              <Refresh
+                onRefreshPress={this.handlePresentationUpdate}
+                style={styles.refreshContainer}
+              />
+            </View>
+            <View style={[styles.presentationBox]}>
+              <Text style={[styles.whiteText, styles.biggerText]}>
+                {this.state.presentationName}
+              </Text>
+            </View>
+
+            <Text
+              style={[
+                styles.slideCount,
+                styles.finalPresentationBox,
+                styles.whiteText,
+                styles.biggerText,
+              ]}
+            >
+              {this.state.slideIndex + 1} / {this.state.slideCount}
             </Text>
           </View>
 
-          <Text
-            style={[
-              styles.slideCount,
-              styles.finalPresentationBox,
-              styles.whiteText,
-              styles.biggerText,
-            ]}
-          >
-            {this.state.slideIndex + 1} / {this.state.slideCount}
-          </Text>
-        </View>
-
-        <View style={styles.module}>
-          <View style={styles.containerTitle}>
-            <Text style={styles.containerTitleText}>Slides</Text>
-            <View style={styles.slidesSizeButtonsContainer}>
-              <Pressable
-                style={[styles.slidesSizeForm]}
-                onPress={this.increaseSlideSize}
-              >
-                <Text style={styles.slidesSizeButtons}>+</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.slidesSizeForm]}
-                onPress={this.decreaseSlideSize}
-              >
-                <Text style={styles.slidesSizeButtons}>-</Text>
-              </Pressable>
+          <View style={styles.module}>
+            <View style={styles.containerTitle}>
+              <Text style={styles.containerTitleText}>Slides</Text>
+              <View style={styles.slidesSizeButtonsContainer}>
+                <Pressable
+                  style={[styles.slidesSizeForm]}
+                  onPress={this.increaseSlideSize}
+                >
+                  <Text style={styles.slidesSizeButtons}>+</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.slidesSizeForm]}
+                  onPress={this.decreaseSlideSize}
+                >
+                  <Text style={styles.slidesSizeButtons}>-</Text>
+                </Pressable>
+              </View>
+            </View>
+            <View style={styles.containerSlides}>{slideImgs}</View>
+          </View>
+        </>
+      );
+    } else {
+      return (
+        <>
+          <View style={styles.module}>
+            <View style={[styles.containerTitle]}>
+              <Text style={[styles.containerTitleText]}>Presentation</Text>
+              <Refresh
+                onRefreshPress={this.handlePresentationUpdate}
+                style={styles.refreshContainer}
+              />
+            </View>
+            <View style={[styles.presentationBox]}>
+              <Text style={[styles.whiteText, styles.biggerText]}>
+                No Presentation Selected
+              </Text>
             </View>
           </View>
-          <View style={styles.containerSlides}>{slideImgs}</View>
-        </View>
-      </>
-    );
+        </>
+      );
+    }
   }
 }
 
