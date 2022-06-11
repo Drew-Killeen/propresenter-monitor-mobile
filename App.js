@@ -120,7 +120,7 @@ class PageContainer extends Component {
             <ScrollView>
               <Text style={styles.pageTitle}>ProPresenter Monitor</Text>
               <TimerContainer />
-              <SlidesContainer />
+              <PresentationContainer />
             </ScrollView>
           ) : (
             <>
@@ -303,91 +303,36 @@ class Slide extends React.Component {
 }
 
 class SlidesContainer extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      presentationIsCleared: false,
-      presentationID: "1",
-      presentationName: "",
-      slideIndex: 0,
-      slideCount: 0,
-    };
+  // constructor(props) {
+  //   super(props);
+  // }
 
-    this.handlePresentationUpdate = this.handlePresentationUpdate.bind(this);
-  }
-
-  componentDidMount() {
-    this.handlePresentationUpdate();
-    // this.checkIfPresentationIsCleared();
-  }
-
-  checkIfPresentationIsCleared() {
-    ProPresenterApi.fetchCurrentSlideIndex(ipDefault, portDefault)
-      .then((response) => {
-        if (response.data.presentation_index.index == null) {
-          this.setState({
-            presentationIsCleared: true,
-          });
-        } else {
-          this.setState({
-            presentationIsCleared: false,
-          });
-          this.handlePresentationUpdate();
-        }
-      })
-      .catch(() => {
-        this.setState({
-          presentationIsCleared: true,
-        });
-      });
-  }
-
-  handlePresentationUpdate() {
-    ProPresenterApi.fetchCurrentSlideIndex(ipDefault, portDefault)
-      .then((response) => {
-        this.setState({
-          presentationID: response.data.presentation_index.presentation_id.uuid,
-          presentationName:
-            response.data.presentation_index.presentation_id.name,
-          slideIndex: response.data.presentation_index.index,
-        });
-
-        this.buildSlideArray(
-          response.data.presentation_index.presentation_id.uuid,
-          0
+  // Create an array containing a slide component for each thumbnail
+  buildSlideImgsArray() {
+    let slideImgs = [];
+    if (this.props.slideCount > 0) {
+      for (let i = 0; i < this.props.slideCount; i++) {
+        slideImgs.push(
+          <Slide
+            img={ProPresenterApi.fetchSlideThumbnail(
+              ipDefault,
+              portDefault,
+              this.props.presentationId,
+              i,
+              thumbnailLoadQuality
+            )}
+            slideNumber={i + 1}
+            currentSlide={
+              this.props.slideIndex === i
+                ? styles.currentSlide
+                : styles.notCurrentSlide
+            }
+            key={i}
+          />
         );
-      })
-      .catch(() => {
-        this.setState({
-          presentationIsCleared: true,
-        });
-      });
-  }
-
-  // Count the number of slides recursively
-  buildSlideArray(id, index) {
-    ProPresenterApi.fetchSlideCount(
-      ipDefault,
-      portDefault,
-      id,
-      index,
-      thumbnailDisplayQuality
-    )
-      .then(() => {
-        this.buildSlideArray(id, index + 1);
-      })
-      .catch(() => {
-        if (index == 0) {
-          this.setState({
-            presentationIsCleared: true,
-          });
-        } else {
-          this.setState({
-            slideCount: index,
-            presentationIsCleared: false,
-          });
-        }
-      });
+      }
+      return slideImgs;
+    }
   }
 
   increaseSlideSize = () => {
@@ -408,46 +353,121 @@ class SlidesContainer extends React.Component {
   };
 
   render() {
-    if (this.state.presentationIsCleared === false) {
-      let slideImgs = [];
-      if (this.state.slideCount > 0) {
-        for (let i = 0; i < this.state.slideCount; i++) {
-          slideImgs.push(
-            <Slide
-              img={ProPresenterApi.fetchSlideThumbnail(
-                ipDefault,
-                portDefault,
-                this.state.presentationID,
-                i,
-                thumbnailLoadQuality
-              )}
-              slideNumber={i + 1}
-              currentSlide={
-                this.state.slideIndex === i
-                  ? styles.currentSlide
-                  : styles.notCurrentSlide
-              }
-              key={i}
-            />
-          );
-        }
-      }
-      return (
-        <>
-          <View style={styles.module}>
-            <View style={[styles.containerTitle]}>
-              <Text style={[styles.containerTitleText]}>Presentation</Text>
-              <Refresh
-                onRefreshPress={this.handlePresentationUpdate}
-                style={styles.refreshContainer}
-              />
+    let slideImgs = this.buildSlideImgsArray();
+    return (
+      <>
+        <View style={styles.module}>
+          <View style={styles.containerTitle}>
+            <Text style={styles.containerTitleText}>Slides</Text>
+            <View style={styles.slidesSizeButtonsContainer}>
+              <Pressable
+                style={[styles.slidesSizeForm]}
+                onPress={this.increaseSlideSize}
+              >
+                <Text style={styles.slidesSizeButtons}>+</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.slidesSizeForm]}
+                onPress={this.decreaseSlideSize}
+              >
+                <Text style={styles.slidesSizeButtons}>-</Text>
+              </Pressable>
             </View>
-            <View style={[styles.presentationBox]}>
-              <Text style={[styles.whiteText, styles.biggerText]}>
-                {this.state.presentationName}
-              </Text>
-            </View>
+          </View>
+          <View style={styles.containerSlides}>{slideImgs}</View>
+        </View>
+      </>
+    );
+  }
+}
 
+class PresentationContainer extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      presentationIsCleared: false,
+      presentationId: "1",
+      presentationName: "",
+      slideIndex: 0,
+      slideCount: 0,
+    };
+
+    this.handlePresentationUpdate = this.handlePresentationUpdate.bind(this);
+  }
+
+  componentDidMount() {
+    this.handlePresentationUpdate();
+  }
+
+  // Updates presentation info and slide array
+  handlePresentationUpdate() {
+    ProPresenterApi.fetchCurrentSlideIndex(ipDefault, portDefault)
+      .then((response) => {
+        this.setState({
+          presentationId: response.data.presentation_index.presentation_id.uuid,
+          presentationName:
+            response.data.presentation_index.presentation_id.name,
+          slideIndex: response.data.presentation_index.index,
+        });
+
+        this.getSlideCount(
+          response.data.presentation_index.presentation_id.uuid,
+          0
+        );
+      })
+      .catch(() => {
+        this.setState({
+          presentationIsCleared: true,
+        });
+      });
+  }
+
+  // Count the number of slides recursively
+  getSlideCount(id, index) {
+    ProPresenterApi.fetchSlideCount(
+      ipDefault,
+      portDefault,
+      id,
+      index,
+      thumbnailDisplayQuality
+    )
+      .then(() => {
+        this.getSlideCount(id, index + 1);
+      })
+      .catch(() => {
+        if (index == 0) {
+          this.setState({
+            presentationIsCleared: true,
+          });
+        } else {
+          this.setState({
+            slideCount: index,
+            presentationIsCleared: false,
+          });
+        }
+      });
+  }
+
+  render() {
+    return (
+      <>
+        <View style={styles.module}>
+          <View style={[styles.containerTitle]}>
+            <Text style={[styles.containerTitleText]}>Presentation</Text>
+            <Refresh
+              onRefreshPress={this.handlePresentationUpdate}
+              style={styles.refreshContainer}
+            />
+          </View>
+          <View style={[styles.presentationBox]}>
+            <Text style={[styles.whiteText, styles.biggerText]}>
+              {!this.state.presentationIsCleared
+                ? this.state.presentationName
+                : "No Presentation Selected"}
+            </Text>
+          </View>
+
+          {!this.state.presentationIsCleared ? (
             <Text
               style={[
                 styles.slideCount,
@@ -458,50 +478,21 @@ class SlidesContainer extends React.Component {
             >
               {this.state.slideIndex + 1} / {this.state.slideCount}
             </Text>
-          </View>
-
-          <View style={styles.module}>
-            <View style={styles.containerTitle}>
-              <Text style={styles.containerTitleText}>Slides</Text>
-              <View style={styles.slidesSizeButtonsContainer}>
-                <Pressable
-                  style={[styles.slidesSizeForm]}
-                  onPress={this.increaseSlideSize}
-                >
-                  <Text style={styles.slidesSizeButtons}>+</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.slidesSizeForm]}
-                  onPress={this.decreaseSlideSize}
-                >
-                  <Text style={styles.slidesSizeButtons}>-</Text>
-                </Pressable>
-              </View>
-            </View>
-            <View style={styles.containerSlides}>{slideImgs}</View>
-          </View>
-        </>
-      );
-    } else {
-      return (
-        <>
-          <View style={styles.module}>
-            <View style={[styles.containerTitle]}>
-              <Text style={[styles.containerTitleText]}>Presentation</Text>
-              <Refresh
-                onRefreshPress={this.handlePresentationUpdate}
-                style={styles.refreshContainer}
-              />
-            </View>
-            <View style={[styles.presentationBox]}>
-              <Text style={[styles.whiteText, styles.biggerText]}>
-                No Presentation Selected
-              </Text>
-            </View>
-          </View>
-        </>
-      );
-    }
+          ) : (
+            <></>
+          )}
+        </View>
+        {!this.state.presentationIsCleared ? (
+          <SlidesContainer
+            slideCount={this.state.slideCount}
+            presentationId={this.state.presentationId}
+            slideIndex={this.state.slideIndex}
+          />
+        ) : (
+          <></>
+        )}
+      </>
+    );
   }
 }
 
