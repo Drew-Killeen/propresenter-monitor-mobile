@@ -82,6 +82,7 @@ class PageContainer extends Component {
   };
 
   checkConnection = (ip, port) => {
+    this.setState({ checkingConnection: true });
     ipDefault = ip;
     portDefault = port;
     multiSet();
@@ -92,7 +93,7 @@ class PageContainer extends Component {
         }
       })
       .catch((response) => {
-        this.setState({ error: true });
+        this.setState({ error: true, checkingConnection: false });
         // console.log(response.status);
       });
   };
@@ -172,10 +173,10 @@ const ConfigFields = (props) => {
             props.onConfigSuccess(ip, port);
           }}
         >
-          {props.error ? (
-            <Text style={styles.buttonText}>Connect</Text>
-          ) : (
+          {props.checkingConnection ? (
             <Text style={styles.buttonText}>Connecting...</Text>
+          ) : (
+            <Text style={styles.buttonText}>Connect</Text>
           )}
         </Pressable>
       </View>
