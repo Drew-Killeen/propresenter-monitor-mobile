@@ -1,8 +1,11 @@
 # propresenter-monitor-mobile
 
-Known bugs: 
-- IP and port do not save on Android
-- Does not handle case when no presentation is selected (should only show timers)
+Known bugs:
+
+- IP and port do not save after app closes
 
 To add:
-- Resize buttons for slide thumbnails
+
+- Add responsive buttons
+- Add back button to change config options
+- Demo button on main page that allows for viewing the function of the app without having to connect to ProPresenter
