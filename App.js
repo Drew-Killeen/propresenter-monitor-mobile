@@ -4,73 +4,65 @@ import {
   View,
   ScrollView,
   TextInput,
-  Button,
-  StyleSheet,
   Image,
+  SafeAreaView,
+  Pressable,
+  Dimensions,
+  Platform,
+  BackHandler,
+  Alert,
 } from "react-native";
-const axios = require("axios");
+import { LinearGradient } from "expo-linear-gradient";
+import styles from "./styles.js";
+import * as ProPresenterApi from "./api.js";
+import { setStatusBarStyle } from "expo-status-bar";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import AndroidSwipeRefreshLayoutNativeComponent from "react-native/Libraries/Components/RefreshControl/AndroidSwipeRefreshLayoutNativeComponent";
 
-let thumbnailQuality = 300;
-let ip = "192.168.2.39";
-let port = "49771";
+setStatusBarStyle("light");
 
-const fetchVersion = () => {
-  return axios
-    .get("http://" + ip + ":" + port + "/version")
-    .then((response) => {
-      return response;
-    });
+// Sets the thumbnail size so that two thumbnails fit side by side, unless the size is greater than 300
+let thumbnailDisplayQuality = Math.min(
+  Math.ceil(Dimensions.get("window").width / 2.4),
+  300
+);
+let thumbnailLoadQuality = Math.min(
+  Math.ceil(Dimensions.get("window").width / 1.2),
+  1000
+);
+let ipDefault = "";
+let portDefault = "";
+
+const multiSet = async () => {
+  const firstPair = ["@ProPresenter_Ip", ipDefault];
+  const secondPair = ["@ProPresenter_Key", portDefault];
+  try {
+    await AsyncStorage.multiSet([firstPair, secondPair]);
+  } catch (e) {
+    //save error
+  }
 };
 
-const fetchTimerData = () => {
-  return axios
-    .get("http://" + ip + ":" + port + "/v1/timers/current")
-    .then((response) => {
-      return response;
-    });
+const getMultiple = async () => {
+  let values;
+  try {
+    values = await AsyncStorage.multiGet([
+      "@ProPresenter_Ip",
+      "@ProPresenter_Key",
+    ]);
+  } catch (e) {
+    // read error
+  }
+  if (values[0][1] != null) {
+    ipDefault = values[0][1];
+  }
+
+  if (values[1][1] != null) {
+    portDefault = values[1][1];
+  }
 };
 
-const fetchCurrentSlideIndex = () => {
-  return axios
-    .get("http://" + ip + ":" + port + "/v1/presentation/slide_index")
-    .then((response) => {
-      return response;
-    });
-};
-
-const fetchSlideCount = (id, index) => {
-  return axios
-    .get(
-      "http://" +
-        ip +
-        ":" +
-        port +
-        "/v1/presentation/" +
-        id +
-        "/thumbnail/" +
-        index +
-        "?quality=" +
-        thumbnailQuality
-    )
-    .then(() => {
-      return;
-    });
-};
-
-const fetchSlideThumbnail = (id, index) => {
-  return (
-    "http://" +
-    ip +
-    ":" +
-    port +
-    "/v1/presentation/" +
-    id +
-    "/thumbnail/" +
-    index +
-    "?quality=" +
-    thumbnailQuality
-  );
-};
+getMultiple();
 
 class PageContainer extends Component {
   constructor(props) {
@@ -78,50 +70,74 @@ class PageContainer extends Component {
     this.state = {
       configured: false,
       error: false,
+      checkingConnection: false,
     };
   }
 
-  checkConnection = () => {
-    fetchVersion()
+  backAction = () => {
+    if (this.state.configured === true) {
+      this.setState({ configured: false });
+    }
+    return true;
+  };
+
+  checkConnection = (ip, port) => {
+    ipDefault = ip;
+    portDefault = port;
+    multiSet();
+    ProPresenterApi.fetchVersion(ipDefault, portDefault)
       .then((response) => {
         if (response.status == 200) {
           this.setState({ configured: true, error: false });
-          console.log(response.status);
         }
       })
       .catch((response) => {
         this.setState({ error: true });
-        console.log(response.status);
+        // console.log(response.status);
       });
   };
 
+  componentDidMount() {
+    this.backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      this.backAction
+    );
+  }
+
+  componentWillUnmount() {
+    this.backHandler.remove();
+  }
+
   render() {
     return (
-      <ScrollView>
-        <Text style={styles.pageTitle}>ProPresenter Monitor</Text>
+      <LinearGradient
+        colors={["#393939", "#282828"]}
+        style={styles.pageGradient}
+      >
+        <SafeAreaView style={[styles.pageContainer, styles.AndroidSafeArea]}>
+          <Text style={styles.pageTitle}>ProPresenter Monitor</Text>
 
-        {this.state.configured ? (
-          <>
-            <TimerContainer />
-            <SlidesContainer />
-          </>
-        ) : (
-          <>
-            <Text>unconfigured</Text>
+          {this.state.configured ? (
+            <ScrollView>
+              <TimerContainer />
+              <SlidesContainer />
+            </ScrollView>
+          ) : (
             <ConfigFields
               onConfigSuccess={this.checkConnection}
               error={this.state.error}
+              checkingConnection={this.state.checkingConnection}
             />
-          </>
-        )}
-      </ScrollView>
+          )}
+        </SafeAreaView>
+      </LinearGradient>
     );
   }
 }
 
 const ConfigFields = (props) => {
-  const [ip, onChangeIp] = React.useState("192.168.2.39");
-  const [port, onChangePort] = React.useState("49771");
+  const [ip, onChangeIp] = React.useState(ipDefault);
+  const [port, onChangePort] = React.useState(portDefault);
   let connectText = "Connect";
 
   return (
@@ -129,38 +145,45 @@ const ConfigFields = (props) => {
       <View style={styles.configSection}>
         <Text style={styles.configLabel}>IP Address:</Text>
         <TextInput
+          keyboardType="numeric"
           style={styles.textInput}
           value={ip}
           name="ip"
           type="text"
-          onChange={onChangeIp}
+          onChangeText={onChangeIp}
         />
       </View>
 
       <View style={styles.configSection}>
         <Text style={styles.configLabel}>Port:</Text>
         <TextInput
+          keyboardType="numeric"
           style={styles.textInput}
           name="port"
           type="text"
           value={port}
-          onChange={onChangePort}
+          onChangeText={onChangePort}
         />
       </View>
-      <Text>
-        <View>
-          <Button
-            style={styles.submitConnect}
-            title={connectText}
-            onPress={props.onConfigSuccess}
-          />
-        </View>
-        {props.error ? (
-          <Text style={styles.error}>Error: cannot connect</Text>
-        ) : (
-          ""
-        )}
-      </Text>
+      <View>
+        <Pressable
+          style={styles.submitConnect}
+          onPress={() => {
+            props.onConfigSuccess(ip, port);
+          }}
+        >
+          {props.error ? (
+            <Text style={styles.buttonText}>Connect</Text>
+          ) : (
+            <Text style={styles.buttonText}>Connecting...</Text>
+          )}
+        </Pressable>
+      </View>
+      {props.error ? (
+        <Text style={styles.errorMessage}>Error: cannot connect</Text>
+      ) : (
+        <Text></Text>
+      )}
     </View>
   );
 };
@@ -168,12 +191,20 @@ const ConfigFields = (props) => {
 class Timer extends React.Component {
   render() {
     return (
-      <View style={styles.timerBox}>
-        <Text style={styles.timerLabel}>
-          {this.props.name}
-          <Text style={styles.timerTime}>{this.props.time}</Text>
-        </Text>
-      </View>
+      <Text style={styles.timer}>
+        <View
+          style={this.props.finalRow ? styles.finalTimerBox : styles.timerBox}
+        >
+          <Text
+            style={[styles.timerLabel, styles.whiteText, styles.biggerText]}
+          >
+            {this.props.name}:
+          </Text>
+          <Text style={[styles.timerTime, styles.whiteText, styles.biggerText]}>
+            {this.props.time}
+          </Text>
+        </View>
+      </Text>
     );
   }
 }
@@ -181,6 +212,7 @@ class Timer extends React.Component {
 class TimerContainer extends React.Component {
   state = {
     timers: [],
+    videoTimer: "",
   };
 
   componentDidMount() {
@@ -192,24 +224,56 @@ class TimerContainer extends React.Component {
   }
 
   tick() {
-    fetchTimerData().then((response) => {
+    ProPresenterApi.fetchTimerData(ipDefault, portDefault).then((response) => {
       this.setState({
         timers: response.data,
       });
     });
+    ProPresenterApi.fetchVideoTimerData(ipDefault, portDefault).then(
+      (response) => {
+        this.setState({
+          videoTimer: response.data,
+        });
+      }
+    );
   }
 
   render() {
     return (
       <View style={[styles.module, styles.timersContainer]}>
-        <Text style={[styles.containerTitle, styles.timersTitle]}>Timers</Text>
+        <View style={styles.containerTitle}>
+          <Text style={styles.containerTitleText}>Timers</Text>
+        </View>
+
         {this.state.timers.map((timer) => {
           return (
-            <Text key={timer.id.index} style={styles.timer}>
-              <Timer name={timer.id.name} time={timer.time} />
-            </Text>
+            <Timer
+              name={timer.id.name}
+              time={timer.time}
+              key={timer.id.index}
+            />
           );
         })}
+        <Timer
+          name="Video Countdown"
+          time={this.state.videoTimer}
+          finalRow="true"
+        />
+      </View>
+    );
+  }
+}
+
+class Refresh extends React.Component {
+  render() {
+    return (
+      <View style={styles.refreshContainer}>
+        <Pressable
+          style={styles.refreshButtonPressable}
+          onPress={this.props.onRefreshPress}
+        >
+          <Text style={styles.refreshButton}>Refresh</Text>
+        </Pressable>
       </View>
     );
   }
@@ -218,10 +282,16 @@ class TimerContainer extends React.Component {
 class Slide extends React.Component {
   render() {
     return (
-      <View className={[this.props.currentSlide, styles.slideBox]}>
+      <View style={[styles.slideBox, this.props.currentSlide]}>
         <Image
           source={{ uri: this.props.img }}
-          style={[{ width: 300, height: 169 }, styles.slideThumbnail]}
+          style={[
+            {
+              width: thumbnailDisplayQuality,
+              height: Math.ceil(thumbnailDisplayQuality * 0.5625),
+            },
+            styles.slideThumbnail,
+          ]}
         />
         <Text style={styles.slideNumber}>{this.props.slideNumber}</Text>
       </View>
@@ -247,22 +317,31 @@ class SlidesContainer extends React.Component {
   }
 
   handlePresentationUpdate() {
-    fetchCurrentSlideIndex().then((response) => {
-      this.setState({
-        presentationID: response.data.presentation_index.presentation_id.uuid,
-        presentationName: response.data.presentation_index.presentation_id.name,
-        slideIndex: response.data.presentation_index.index,
-      });
+    ProPresenterApi.fetchCurrentSlideIndex(ipDefault, portDefault).then(
+      (response) => {
+        this.setState({
+          presentationID: response.data.presentation_index.presentation_id.uuid,
+          presentationName:
+            response.data.presentation_index.presentation_id.name,
+          slideIndex: response.data.presentation_index.index,
+        });
 
-      this.buildSlideArray(
-        response.data.presentation_index.presentation_id.uuid,
-        0
-      );
-    });
+        this.buildSlideArray(
+          response.data.presentation_index.presentation_id.uuid,
+          0
+        );
+      }
+    );
   }
 
   buildSlideArray(id, index) {
-    fetchSlideCount(id, index)
+    ProPresenterApi.fetchSlideCount(
+      ipDefault,
+      portDefault,
+      id,
+      index,
+      thumbnailDisplayQuality
+    )
       .then(() => {
         this.buildSlideArray(id, index + 1);
       })
@@ -274,16 +353,16 @@ class SlidesContainer extends React.Component {
   }
 
   increaseSlideSize = () => {
-    if (thumbnailQuality < 500) {
-      thumbnailQuality = thumbnailQuality + 50;
-      this.buildSlideArray(this.state.presentationID, 0);
+    if (thumbnailDisplayQuality + 50 < thumbnailLoadQuality) {
+      thumbnailDisplayQuality = thumbnailDisplayQuality + 50;
+    } else if (thumbnailDisplayQuality < thumbnailDisplayQuality) {
+      thumbnailDisplayQuality = thumbnailLoadQuality;
     }
   };
 
   decreaseSlideSize = () => {
-    if (thumbnailQuality > 100) {
-      thumbnailQuality = thumbnailQuality - 50;
-      this.buildSlideArray(this.state.presentationID, 0);
+    if (thumbnailDisplayQuality > 100) {
+      thumbnailDisplayQuality = thumbnailDisplayQuality - 50;
     }
   };
 
@@ -293,13 +372,20 @@ class SlidesContainer extends React.Component {
       for (let i = 0; i < this.state.slideCount; i++) {
         slideImgs.push(
           <Slide
-            img={fetchSlideThumbnail(this.state.presentationID, i)}
+            img={ProPresenterApi.fetchSlideThumbnail(
+              ipDefault,
+              portDefault,
+              this.state.presentationID,
+              i,
+              thumbnailLoadQuality
+            )}
             slideNumber={i + 1}
             currentSlide={
               this.state.slideIndex === i
                 ? styles.currentSlide
                 : styles.notCurrentSlide
             }
+            key={i}
           />
         );
       }
@@ -308,56 +394,51 @@ class SlidesContainer extends React.Component {
     return (
       <>
         <View style={styles.module}>
-          <Text style={styles.containerTitle}>
-            Presentation
-            {/* <View style={styles.refreshContainer}>
-              <form
-                style={styles.refreshForm}
-                onClick={this.handlePresentationUpdate}
-              >
-                <input
-                  style={styles.refreshButton}
-                  type="button"
-                  value="Refresh"
-                />
-              </form>
-            </View> */}
-          </Text>
-          <Text style={[styles.presentationName, styles.presentationBox]}>
-            {this.state.presentationName}
-          </Text>
+          <View style={[styles.containerTitle]}>
+            <Text style={[styles.containerTitleText]}>Presentation</Text>
+            <Refresh
+              onRefreshPress={this.handlePresentationUpdate}
+              style={styles.refreshContainer}
+            />
+          </View>
+          <View style={[styles.presentationBox]}>
+            <Text style={[styles.whiteText, styles.biggerText]}>
+              {this.state.presentationName}
+            </Text>
+          </View>
 
-          <Text style={[styles.slideCount, styles.presentationBox]}>
+          <Text
+            style={[
+              styles.slideCount,
+              styles.finalPresentationBox,
+              styles.whiteText,
+              styles.biggerText,
+            ]}
+          >
             {this.state.slideIndex + 1} / {this.state.slideCount}
           </Text>
         </View>
 
         <View style={styles.module}>
-          <Text style={styles.containerTitle}>
-            Slides
-            {/* <View style={styles.slides - sizeButtonsContainer}>
-              <form
-                style={styles.slidesSizeForm}
-                onClick={this.increaseSlideSize}
-              >
-                <input
-                  style={styles.slidesSizeButtons}
-                  type="button"
-                  value="+"
-                />
-              </form>
-              <form
-                style={styles.slidesSizeForm}
-                onClick={this.decreaseSlideSize}
-              >
-                <input
-                  style={styles.slidesSizeButtons}
-                  type="button"
-                  value="-"
-                />
-              </form>
-            </View> */}
-          </Text>
+          <View style={styles.containerTitle}>
+            <Text style={styles.containerTitleText}>
+              Slides
+              <View style={styles.slidesSizeButtonsContainer}>
+                <Pressable
+                  style={[styles.slidesSizeForm]}
+                  onPress={this.increaseSlideSize}
+                >
+                  <Text style={styles.slidesSizeButtons}>+</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.slidesSizeForm]}
+                  onPress={this.decreaseSlideSize}
+                >
+                  <Text style={styles.slidesSizeButtons}>-</Text>
+                </Pressable>
+              </View>
+            </Text>
+          </View>
           <View style={styles.containerSlides}>{slideImgs}</View>
         </View>
       </>
@@ -365,5 +446,4 @@ class SlidesContainer extends React.Component {
   }
 }
 
-const styles = StyleSheet.create({});
 export default PageContainer;

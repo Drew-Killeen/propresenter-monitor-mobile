@@ -36,7 +36,7 @@ class PageContainer extends React.Component {
   render() {
     return (
       <>
-        <View className="page-title">ProPresenter Monitor</View>
+        <View className="page-title">ProPresenters Monitor</View>
 
         {this.state.configured ? (
           <>
