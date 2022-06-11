@@ -27,7 +27,7 @@ let thumbnailDisplayQuality = Math.min(
   300
 );
 let thumbnailLoadQuality = Math.min(
-  Math.ceil(Dimensions.get("window").width / 1.2),
+  Math.ceil(Dimensions.get("window").width / 1.1),
   1000
 );
 let ipDefault = "";
@@ -82,7 +82,7 @@ class PageContainer extends Component {
   };
 
   checkConnection = (ip, port) => {
-    this.setState({ checkingConnection: true });
+    this.setState({ checkingConnection: true, error: false });
     ipDefault = ip;
     portDefault = port;
     multiSet();
@@ -356,14 +356,17 @@ class SlidesContainer extends React.Component {
   increaseSlideSize = () => {
     if (thumbnailDisplayQuality + 50 < thumbnailLoadQuality) {
       thumbnailDisplayQuality = thumbnailDisplayQuality + 50;
+      this.forceUpdate();
     } else if (thumbnailDisplayQuality < thumbnailDisplayQuality) {
       thumbnailDisplayQuality = thumbnailLoadQuality;
+      this.forceUpdate();
     }
   };
 
   decreaseSlideSize = () => {
     if (thumbnailDisplayQuality > 100) {
       thumbnailDisplayQuality = thumbnailDisplayQuality - 50;
+      this.forceUpdate();
     }
   };
 
@@ -422,23 +425,21 @@ class SlidesContainer extends React.Component {
 
         <View style={styles.module}>
           <View style={styles.containerTitle}>
-            <Text style={styles.containerTitleText}>
-              Slides
-              <View style={styles.slidesSizeButtonsContainer}>
-                <Pressable
-                  style={[styles.slidesSizeForm]}
-                  onPress={this.increaseSlideSize}
-                >
-                  <Text style={styles.slidesSizeButtons}>+</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.slidesSizeForm]}
-                  onPress={this.decreaseSlideSize}
-                >
-                  <Text style={styles.slidesSizeButtons}>-</Text>
-                </Pressable>
-              </View>
-            </Text>
+            <Text style={styles.containerTitleText}>Slides</Text>
+            <View style={styles.slidesSizeButtonsContainer}>
+              <Pressable
+                style={[styles.slidesSizeForm]}
+                onPress={this.increaseSlideSize}
+              >
+                <Text style={styles.slidesSizeButtons}>+</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.slidesSizeForm]}
+                onPress={this.decreaseSlideSize}
+              >
+                <Text style={styles.slidesSizeButtons}>-</Text>
+              </Pressable>
+            </View>
           </View>
           <View style={styles.containerSlides}>{slideImgs}</View>
         </View>
