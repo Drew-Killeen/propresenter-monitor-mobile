@@ -21,9 +21,10 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#313131"
+        "foregroundImage": "./assets/adaptive-icon-foreground.png",
+        "backgroundImage": "./assets/adaptive-icon-background.png"
       },
+      "icon": "./assets/icon.png",
       "package": "com.drewkilleen.propresentermonitor"
     },
     "web": {
