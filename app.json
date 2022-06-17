@@ -26,7 +26,8 @@
       },
       "icon": "./assets/icon.png",
       "package": "com.drewkilleen.propresentermonitor",
-      "permissions": []
+      "permissions": [],
+      "versionCode": 2
     },
     "web": {
       "favicon": "./assets/favicon.png"
