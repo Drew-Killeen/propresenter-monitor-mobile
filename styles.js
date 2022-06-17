@@ -196,4 +196,13 @@ export default StyleSheet.create({
   biggerText: {
     fontSize: 20,
   },
+  needHelp: {
+    alignSelf: "center",
+  },
+  needHelpText: {
+    fontSize: 20,
+    color: "#f4f4f4",
+    marginBottom: 10,
+    textDecorationLine: "underline",
+  },
 });

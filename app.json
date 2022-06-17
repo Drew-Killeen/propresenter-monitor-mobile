@@ -2,7 +2,7 @@
   "expo": {
     "name": "ProPresenter Monitor",
     "slug": "propresenter-monitor",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -25,7 +25,8 @@
         "backgroundImage": "./assets/adaptive-icon-background.png"
       },
       "icon": "./assets/icon.png",
-      "package": "com.drewkilleen.propresentermonitor"
+      "package": "com.drewkilleen.propresentermonitor",
+      "permissions": []
     },
     "web": {
       "favicon": "./assets/favicon.png"

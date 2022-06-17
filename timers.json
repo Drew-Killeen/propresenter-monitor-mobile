@@ -1,0 +1,29 @@
+[
+  {
+    "id": {
+      "uuid": "5EBAB693-0C5E-4012-821B-5D26F6DE0341",
+      "name": "Segment Countdown",
+      "index": 0
+    },
+    "time": "00:05:00",
+    "state": "stopped"
+  },
+  {
+    "id": {
+      "uuid": "8B7FD20B-88A1-454C-A228-AF1A2E4B55B7",
+      "name": "PreShow Countdown",
+      "index": 1
+    },
+    "time": "05:00:00",
+    "state": "stopped"
+  },
+  {
+    "id": {
+      "uuid": "27412C4B-D225-4707-9BB2-7E352F9CE081",
+      "name": "Elapsed Time",
+      "index": 2
+    },
+    "time": "00:15:00",
+    "state": "stopped"
+  }
+]

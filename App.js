@@ -8,15 +8,14 @@ import {
   SafeAreaView,
   Pressable,
   Dimensions,
-  Platform,
   BackHandler,
-  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import styles from "./styles.js";
 import * as ProPresenterApi from "./api.js";
 import { setStatusBarStyle } from "expo-status-bar";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as WebBrowser from "expo-web-browser";
 import AndroidSwipeRefreshLayoutNativeComponent from "react-native/Libraries/Components/RefreshControl/AndroidSwipeRefreshLayoutNativeComponent";
 
 setStatusBarStyle("light");
@@ -90,17 +89,16 @@ class PageContainer extends Component {
     saveIpAndPort();
     ProPresenterApi.fetchVersion(ipDefault, portDefault)
       .then((response) => {
-        if (response.status == 200) {
-          this.setState({
-            configured: true,
-            error: false,
-            currentlyCheckingConnection: false,
-          });
-        }
+        // console.log(response);
+        this.setState({
+          configured: true,
+          error: false,
+          currentlyCheckingConnection: false,
+        });
       })
       .catch((response) => {
         this.setState({ error: true, currentlyCheckingConnection: false });
-        // console.log(response.status);
+        // console.log(response);
       });
   };
 
@@ -149,6 +147,7 @@ class PageContainer extends Component {
                   this.state.currentlyCheckingConnection
                 }
               />
+              <HelpLink />
             </>
           )}
         </SafeAreaView>
@@ -209,6 +208,23 @@ const ConfigFields = (props) => {
   );
 };
 
+class HelpLink extends React.Component {
+  _handleOpenWithWebBrowser = () => {
+    WebBrowser.openBrowserAsync("https://propresenter-monitor.web.app/help/");
+  };
+
+  render() {
+    return (
+      <Pressable
+        style={styles.needHelp}
+        onPress={this._handleOpenWithWebBrowser}
+      >
+        <Text style={styles.needHelpText}>Need help?</Text>
+      </Pressable>
+    );
+  }
+}
+
 class Timer extends React.Component {
   render() {
     return (
@@ -247,13 +263,13 @@ class TimerContainer extends React.Component {
   tick() {
     ProPresenterApi.fetchTimerData(ipDefault, portDefault).then((response) => {
       this.setState({
-        timers: response.data,
+        timers: response,
       });
     });
     ProPresenterApi.fetchVideoTimerData(ipDefault, portDefault).then(
       (response) => {
         this.setState({
-          videoTimer: response.data,
+          videoTimer: response,
         });
       }
     );
@@ -422,16 +438,12 @@ class PresentationContainer extends React.Component {
     ProPresenterApi.fetchCurrentSlideIndex(ipDefault, portDefault)
       .then((response) => {
         this.setState({
-          presentationId: response.data.presentation_index.presentation_id.uuid,
-          presentationName:
-            response.data.presentation_index.presentation_id.name,
-          slideIndex: response.data.presentation_index.index,
+          presentationId: response.presentation_index.presentation_id.uuid,
+          presentationName: response.presentation_index.presentation_id.name,
+          slideIndex: response.presentation_index.index,
         });
 
-        this.getSlideCount(
-          response.data.presentation_index.presentation_id.uuid,
-          0
-        );
+        this.getSlideCount(response.presentation_index.presentation_id.uuid, 0);
       })
       .catch(() => {
         this.setState({
@@ -442,17 +454,13 @@ class PresentationContainer extends React.Component {
 
   // Count the number of slides recursively
   getSlideCount(id, index) {
-    ProPresenterApi.fetchSlideCount(
-      ipDefault,
-      portDefault,
-      id,
-      index,
-      thumbnailDisplayQuality
-    )
-      .then(() => {
+    ProPresenterApi.fetchSlideCount(ipDefault, portDefault, id, index, 20)
+      .then((e) => {
+        // console.log(e);
         this.getSlideCount(id, index + 1);
       })
-      .catch(() => {
+      .catch((e) => {
+        // console.log(e);
         if (index == 0) {
           this.setState({
             presentationIsCleared: true,
