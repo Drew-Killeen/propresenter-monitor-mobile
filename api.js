@@ -1,7 +1,7 @@
 const axios = require("axios");
 
 export const fetchVersion = (ip, port) => {
-  if (ip == "demo" && port == "demo") {
+  if (ip == "demo" || ip == "1234") {
     // Get data from version.json
     const jsonVersion = require("./version.json");
     return Promise.resolve(jsonVersion);
@@ -15,7 +15,7 @@ export const fetchVersion = (ip, port) => {
 };
 
 export const fetchTimerData = (ip, port) => {
-  if (ip == "demo" && port == "demo") {
+  if (ip == "demo" || ip == "1234") {
     // Get timer data from timers.json and then create a fake clock in the format "00:00:00"
     const jsonTimers = require("./timers.json");
     return Promise.resolve(jsonTimers);
@@ -29,7 +29,7 @@ export const fetchTimerData = (ip, port) => {
 };
 
 export const fetchVideoTimerData = (ip, port) => {
-  if (ip == "demo" && port == "demo") {
+  if (ip == "demo" || ip == "1234") {
     // Create a fake clock in the format "00:00:00". Update based on current system clock plus offset
     let date = new Date();
     return Promise.resolve("00:00:" + (30 - ((date.getSeconds() + 12) % 30)));
@@ -43,7 +43,7 @@ export const fetchVideoTimerData = (ip, port) => {
 };
 
 export const fetchCurrentSlideIndex = (ip, port) => {
-  if (ip == "demo" && port == "demo") {
+  if (ip == "demo" || ip == "1234") {
     // Get data from slide_index.json
     const jsonSlideIndex = require("./slide_index.json");
     return Promise.resolve(jsonSlideIndex);
@@ -57,7 +57,7 @@ export const fetchCurrentSlideIndex = (ip, port) => {
 };
 
 export const fetchSlideCount = (ip, port, id, index, thumbnailQuality) => {
-  if (ip == "demo" && port == "demo") {
+  if (ip == "demo" || ip == "1234") {
     // Return true while index <= 13
     if (index <= 13) return Promise.resolve(true);
     else return false;
@@ -82,7 +82,7 @@ export const fetchSlideCount = (ip, port, id, index, thumbnailQuality) => {
 };
 
 export const fetchSlideThumbnail = (ip, port, id, index, thumbnailQuality) => {
-  if (ip == "demo" && port == "demo") {
+  if (ip == "demo" || ip == "1234") {
     // Get thumbnails based on index
     return (
       "https://propresenter-monitor.web.app/demo_images/" + index + ".jpeg"
